@@ -1,0 +1,90 @@
+---
+title: "My First published R program"
+author: "JYOTI RANJAN NAYAK"
+date: "August 21, 2013"
+output: html_document
+---
+
+This is a small program to analyse data downloaded from http://funapp.cs.bilkent.edu.tr/DataSets/  House_16H (HH). The analysis is to do a regression estimate of house price(a target column in the dataset) with respect to other variables. I have used linear regression here.
+```{r}
+getwd()
+setwd('F:/sigma analytics & computing/training/example data set')
+list.files()
+Data <-read.csv('house price data set.csv')
+head(Data)
+str(Data)
+summary(Data)
+```
+
+
+Now we will draw histograms and scatterplots using ggplot2 library to further analyse this.
+
+```{r}
+library(ggplot2)
+names(Data)
+qplot(x=price, data = Data) 
+```
+
+If we look at the histogram and summary, it is understood that few zeroes for price data. The housing price can not have zero values and Null value does not provide much information. Hence we can remove them and plot again using ggplot command and binwidth = 10000.  
+
+```{r}
+Data = subset(Data, Data$price != 0)
+summary(Data$price)
+ggplot(data = Data, mapping = aes(price)) +
+  geom_histogram(binwidth = 10000)
+
+```
+
+
+It seems there are some outliers are at the higher end. Let us calculate 1.5 times of 3rd quartile and remove all the values beyond these. These may be exceptional cases.  
+
+```{r}
+x = 56700 * 1.5 
+x
+Data = subset(Data , price < 100000)
+summary(Data)
+```
+
+Let us plot the histogram again to see if it looks fine.
+
+```{r}
+ggplot(data = Data, mapping = aes(price)) +
+  geom_histogram(binwidth = 10000)
+
+```
+
+
+The distribution is right skewed and the price is at a very large scale compared to the other variables(Look the summary). Hence let us take the log of price to decrease its scale and add that as an another column and draw the histogram again to see the distribution of the logprice.  
+
+```{r}
+Data$logprice = log(Data$price + 1)
+ggplot(data = Data, mapping = aes(logprice)) +
+  geom_histogram(binwidth = 0.1)
+
+
+```
+
+
+We have got large number of small values at the lower end where as the rest data are almost normal with a high variance. Let's build a linear regression model now by dividing the data into two parts.Let is consider all the rest variables for modelling now.
+
+```{r}
+library(caTools)
+set.seed(100)
+split = sample.split(Data$price,SplitRatio = 0.5)
+train = subset(Data, split == TRUE)
+test = subset(Data, split == FALSE)
+model <- lm(logprice ~ . -price,data=Data)
+summary(model)
+```
+
+Let us measure RSS on the test data.
+
+```{r}
+prediction <- predict(model,test)
+SSE <- sum((prediction - test$logprice)^2)
+SST <- sum((test$logprice - mean(test$logprice))^2)
+RSSTEST <- 1 - SSE/SST
+RSSTEST
+```
+
+We should apply other regression methodologies on this to get better accuracy. I will keep posting.
